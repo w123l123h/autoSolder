@@ -1,0 +1,7 @@
+set(CMAKE_CXX_STANDARD 11)
+
+file(GLOB_RECURSE SOURCES "./*.cc" "./*.c" "./*.cpp")
+
+idf_component_register(SRCS ${SOURCES}
+                       PRIV_REQUIRES spi_flash driver freertos esp_adc
+                       INCLUDE_DIRS "")
