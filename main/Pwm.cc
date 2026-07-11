@@ -1,7 +1,8 @@
 ﻿#include "Pwm.h"
 #include "esp_log.h"
+#include "freeRTOS/freeRTOS.h"
 
-static const char* TAG = "PWM";
+static const char *TAG = "PWM";
 Pwm::Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC)
 {
 	assert(pinA >= 0 && pinB >= 0 && pinC >= 0);
@@ -17,12 +18,12 @@ Pwm::Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC)
 	timer_cfg.group_id = group_id_;
 	timer_cfg.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
 	timer_cfg.resolution_hz = resolution_hz_;
-	timer_cfg.count_mode = MCPWM_TIMER_COUNT_MODE_UP_DOWN;       // 中央对齐
+	timer_cfg.count_mode = MCPWM_TIMER_COUNT_MODE_UP_DOWN;		 // 中央对齐
 	timer_cfg.period_ticks = timer_cfg.resolution_hz / freq_hz_; // 一个周期的计数总数（不是峰值）
-	timer_period_ = timer_cfg.period_ticks / 2;                  // 峰值用于占空比计算
+	timer_period_ = timer_cfg.period_ticks / 2;					 // 峰值用于占空比计算
 
 	esp_err_t ret = mcpwm_new_timer(&timer_cfg, &timer_);
-    ESP_ERROR_CHECK(ret);
+	ESP_ERROR_CHECK(ret);
 
 	// ---------- 2. 创建三个通道的操作器、比较器、发生器 ----------
 	for (int i = 0; i < 3; ++i)
@@ -56,8 +57,8 @@ Pwm::Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC)
 			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, comparators_[i], MCPWM_GEN_ACTION_LOW),
 		};
 		ret = mcpwm_generator_set_actions_on_compare_event(generators_[i],
-			cmp_actions[0], cmp_actions[1],
-			mcpwm_gen_compare_event_action_t{});
+														   cmp_actions[0], cmp_actions[1],
+														   mcpwm_gen_compare_event_action_t{});
 		ESP_ERROR_CHECK(ret);
 
 		// 初始占空比设为 0
@@ -71,10 +72,17 @@ Pwm::Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC)
 	ret = mcpwm_timer_register_event_callbacks(timer_, &cbs, this);
 	ESP_ERROR_CHECK(ret);
 
+	// 在核心1上启动定时器
+	xTaskCreatePinnedToCore([](void *p)
+							{
+								Pwm *self = static_cast<Pwm *>(p);
+								mcpwm_timer_enable(self->timer_);
+								vTaskDelete(NULL); },
+							"enable", 2048, this, 5, NULL, 1);
 	ESP_LOGI(TAG, "3-Phase PWM initialized @ %ld Hz", freq_hz_);
 }
 
-void Pwm::setCallback(void (*func)(void*), void* data)
+void Pwm::setCallback(void (*func)(void *), void *data)
 {
 	func_ = func;
 	data_ = data;
@@ -82,7 +90,6 @@ void Pwm::setCallback(void (*func)(void*), void* data)
 
 void Pwm::start()
 {
-	mcpwm_timer_enable(timer_);
 	mcpwm_timer_start_stop(timer_, MCPWM_TIMER_START_NO_STOP);
 }
 
@@ -98,9 +105,9 @@ void Pwm::setDuty(float dutyA, float dutyB, float dutyC)
 	mcpwm_comparator_set_compare_value(comparators_[2], dutyToCompare(dutyC));
 }
 
-bool IRAM_ATTR Pwm::onTimerFull(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t* edata, void* user_ctx)
+bool IRAM_ATTR Pwm::onTimerFull(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx)
 {
-	Pwm* self = static_cast<Pwm*>(user_ctx);
+	Pwm *self = static_cast<Pwm *>(user_ctx);
 	if (!self || !self->func_)
 		return false;
 
@@ -110,9 +117,9 @@ bool IRAM_ATTR Pwm::onTimerFull(mcpwm_timer_handle_t timer, const mcpwm_timer_ev
 
 uint32_t Pwm::dutyToCompare(float duty) const
 {
-    if (duty < 0.0f)
-        duty = 0.0f;
-    if (duty > 1.0f)
-        duty = 1.0f;
-    return (uint32_t)((1.0f - duty) * timer_period_);
+	if (duty < 0.0f)
+		duty = 0.0f;
+	if (duty > 1.0f)
+		duty = 1.0f;
+	return (uint32_t)((1.0f - duty) * timer_period_);
 }

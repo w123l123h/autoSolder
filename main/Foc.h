@@ -64,8 +64,6 @@ private:
     volatile float ki_ = 0.0f;
     volatile float kd_ = 0.0f;
 
-    volatile bool is_stop_ = false;
-
     adc_oneshot_unit_handle_t adc_handle = nullptr;
     adc_cali_handle_t cali_handle = nullptr;
 

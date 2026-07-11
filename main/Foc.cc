@@ -74,11 +74,6 @@ void Foc::foc_task(void *p)
         {
             foc->update();
         }
-        if (foc->is_stop_)
-        {
-            foc->is_stop_ = false;
-            return;
-        }
     }
 }
 
