@@ -1,8 +1,12 @@
 ﻿#include "Pwm.h"
 #include "esp_log.h"
 #include "freeRTOS/freeRTOS.h"
+#include "esp_etm.h"
+#include "esp_adc/adc_continuous.h"
+#include "esp_etm.h"
 
 static const char *TAG = "PWM";
+
 Pwm::Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC)
 {
 	assert(pinA >= 0 && pinB >= 0 && pinC >= 0);
@@ -56,23 +60,32 @@ Pwm::Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC)
 			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, comparators_[i], MCPWM_GEN_ACTION_HIGH),
 			MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, comparators_[i], MCPWM_GEN_ACTION_LOW),
 		};
-		ret = mcpwm_generator_set_actions_on_compare_event(generators_[i],
-														   cmp_actions[0], cmp_actions[1],
-														   mcpwm_gen_compare_event_action_t{});
-		ESP_ERROR_CHECK(ret);
+		ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(generators_[i], cmp_actions[0]));
+		ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(generators_[i], cmp_actions[1]));
 
 		// 初始占空比设为 0
 		mcpwm_comparator_set_compare_value(comparators_[i], 0);
 	}
 
+	// ADC比较器
+	mcpwm_comparator_config_t adc_cmpr_cfg;
+	memset(&adc_cmpr_cfg, 0, sizeof(adc_cmpr_cfg));
+	adc_cmpr_cfg.flags.update_cmp_on_tez = true;
+	ESP_ERROR_CHECK(mcpwm_new_comparator(operators_[0], &adc_cmpr_cfg, &adc_comparator_));
+	ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(adc_comparator_, 0));
+
+	mcpwm_comparator_event_callbacks_t adc_cb;
+	adc_cb.on_reach = cmp_on_reach_cb;
+	mcpwm_comparator_register_event_callbacks(adc_comparator_, &adc_cb, this);
+
 	// ---------- 3. 注册定时器事件回调（中断） ----------
 	mcpwm_timer_event_callbacks_t cbs;
 	memset(&cbs, 0, sizeof(cbs));
-	cbs.on_full = onTimerFull; // 向上计数到周期时触发
+	cbs.on_empty = onTimerFull;
 	ret = mcpwm_timer_register_event_callbacks(timer_, &cbs, this);
 	ESP_ERROR_CHECK(ret);
 
-	// 在核心1上启动定时器
+	// 在`核心1`上启动定时器
 	xTaskCreatePinnedToCore([](void *p)
 							{
 								Pwm *self = static_cast<Pwm *>(p);
@@ -88,6 +101,12 @@ void Pwm::setCallback(void (*func)(void *), void *data)
 	data_ = data;
 }
 
+void Pwm::setAdcCallback(void (*func)(void *), void *data)
+{
+	adc_func_ = func;
+	adc_data_ = data;
+}
+
 void Pwm::start()
 {
 	mcpwm_timer_start_stop(timer_, MCPWM_TIMER_START_NO_STOP);
@@ -100,9 +119,13 @@ void Pwm::stop()
 
 void Pwm::setDuty(float dutyA, float dutyB, float dutyC)
 {
-	mcpwm_comparator_set_compare_value(comparators_[0], dutyToCompare(dutyA));
-	mcpwm_comparator_set_compare_value(comparators_[1], dutyToCompare(dutyB));
-	mcpwm_comparator_set_compare_value(comparators_[2], dutyToCompare(dutyC));
+	uint32_t a = dutyToCompare(dutyA);
+	uint32_t b = dutyToCompare(dutyB);
+	uint32_t c = dutyToCompare(dutyC);
+	mcpwm_comparator_set_compare_value(comparators_[0], a);
+	mcpwm_comparator_set_compare_value(comparators_[1], b);
+	mcpwm_comparator_set_compare_value(comparators_[2], c);
+	mcpwm_comparator_set_compare_value(adc_comparator_, (a + b + c) / 3);
 }
 
 bool IRAM_ATTR Pwm::onTimerFull(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx)
@@ -112,6 +135,17 @@ bool IRAM_ATTR Pwm::onTimerFull(mcpwm_timer_handle_t timer, const mcpwm_timer_ev
 		return false;
 
 	self->func_(self->data_);
+	return false;
+}
+
+bool IRAM_ATTR Pwm::cmp_on_reach_cb(mcpwm_cmpr_handle_t comparator,
+									const mcpwm_compare_event_data_t *edata,
+									void *user_ctx)
+{
+	// adc采样
+	Pwm *pwm = static_cast<Pwm *>(user_ctx);
+	assert(pwm && pwm->adc_func_);
+	pwm->adc_func_(pwm->adc_data_);
 	return false;
 }
 

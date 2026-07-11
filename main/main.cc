@@ -11,7 +11,7 @@ extern "C" void app_main(void)
 
     Foc foc;
     foc.init(7, 10, 150, 12);
-    foc.q(1);
+    foc.q(6);
     foc.d(0);
     foc.connect(new AngleSensor(GPIO_NUM_10, GPIO_NUM_12, GPIO_NUM_13, GPIO_NUM_11));
     foc.connect(new CurrentSensor(ADC_CHANNEL_3, ADC_CHANNEL_5));

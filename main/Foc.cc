@@ -30,9 +30,12 @@ void Foc::start()
         return;
 
     semaphore_ = xSemaphoreCreateBinary();
+    adc_semaphore_ = xSemaphoreCreateBinary();
     last_angle_ = -1.0;
     xTaskCreatePinnedToCore(foc_task, "FOCTask", 4096, this,
                             configMAX_PRIORITIES - 1, &task_handle_, 1);
+    xTaskCreatePinnedToCore(adc_task, "AdcTask", 4096, this,
+                            configMAX_PRIORITIES - 1, &adc_task_handle_, 0);
 
     pwm_->start();
 }
@@ -43,6 +46,11 @@ void Foc::stop()
     {
         vTaskDelete(task_handle_);
         task_handle_ = nullptr;
+    }
+    if(adc_task_handle_)
+    {
+        vTaskDelete(adc_task_handle_);
+        adc_task_handle_ = nullptr;
     }
 }
 
@@ -60,6 +68,7 @@ void Foc::connect(IPwm *p)
 {
     pwm_ = p;
     pwm_->setCallback(pwm_func, this);
+    pwm_->setAdcCallback(adc_func, this);
 }
 
 void Foc::foc_task(void *p)
@@ -77,12 +86,38 @@ void Foc::foc_task(void *p)
     }
 }
 
+void Foc::adc_task(void *p)
+{
+    Foc *foc = (Foc *)p;
+    assert(foc);
+
+    while (1)
+    {
+        assert(foc->adc_semaphore_);
+        if (xSemaphoreTake(foc->adc_semaphore_, portMAX_DELAY) == pdTRUE)
+        {
+            // 读取电流
+            assert(foc->current_sensor_);
+            foc->current_sensor_->getCurrent((float &)foc->current_ma_a_, (float &)foc->current_ma_b_, (float &)foc->current_ma_c_);
+        }
+    }
+}
+
 void Foc::pwm_func(void *p)
 {
     Foc *foc = (Foc *)p;
     assert(foc);
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(foc->semaphore_, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void Foc::adc_func(void *p)
+{
+    Foc *foc = (Foc *)p;
+    assert(foc);
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(foc->adc_semaphore_, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
@@ -124,10 +159,6 @@ void Foc::update()
     {
         angle_ += 2.0 * M_PI;
     }
-
-    // 读取电流
-    assert(current_sensor_);
-    assert(current_sensor_->getCurrent(current_ma_a_, current_ma_b_, current_ma_c_));
 
     update_duty();
 }

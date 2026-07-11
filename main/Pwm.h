@@ -11,6 +11,7 @@ public:
     Pwm(int group_id, uint32_t freq_hz, int pinA, int pinB, int pinC);
 
     virtual void setCallback(void (*func)(void *), void *data) override;
+    virtual void setAdcCallback(void (*func)(void *), void *data) override;
     virtual void start() override;
     void stop();
     virtual void setDuty(float dutyA, float dutyB, float dutyC) override;
@@ -19,6 +20,9 @@ private:
     static bool IRAM_ATTR onTimerFull(mcpwm_timer_handle_t timer,
                                       const mcpwm_timer_event_data_t *edata,
                                       void *user_ctx);
+    static bool IRAM_ATTR cmp_on_reach_cb(mcpwm_cmpr_handle_t comparator,
+                                          const mcpwm_compare_event_data_t *edata,
+                                          void *user_ctx);
     uint32_t dutyToCompare(float duty) const;
 
 private:
@@ -30,11 +34,14 @@ private:
 
     void (*func_)(void *) = nullptr;
     void *data_ = nullptr;
+    void (*adc_func_)(void *) = nullptr;
+    void *adc_data_ = nullptr;
 
     mcpwm_timer_handle_t timer_ = nullptr;
     mcpwm_oper_handle_t operators_[3] = {nullptr};
     mcpwm_cmpr_handle_t comparators_[3] = {nullptr};
     mcpwm_gen_handle_t generators_[3] = {nullptr};
+    mcpwm_cmpr_handle_t adc_comparator_ = nullptr;
 };
 
 #endif

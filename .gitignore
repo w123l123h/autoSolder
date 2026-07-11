@@ -80,3 +80,5 @@ Desktop.ini
 .vs
 .vscode
 .devcontainer
+build.ps1
+rebuild.ps1
