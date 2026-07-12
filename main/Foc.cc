@@ -227,8 +227,8 @@ void Foc::update()
         pid_angle_ = total_angle_;
         // pid控制
         q_ = pid_speed_.update(speed_) / (kv_ * M_PI * 2 / 60);
-        q_ = std::min(dc_, q_);
-        d_ = std::min(dc_, d_);
+        q_ = std::max(std::min(dc_, q_), -dc_);
+        d_ = std::max(std::min(dc_, d_), -dc_);
         pid_count_ = 0;
         pid_ts_ = us;
     }
@@ -308,9 +308,9 @@ void Foc::update_duty()
     assert(pwm_);
     pwm_->setDuty(dutyA, dutyB, dutyC);
 
-    if (update_offset_ && fabs(Vbeta) < 0.000001)
-    {
-        offset_step_ = 0;
-        // ESP_LOGI(TAG, "Vbeta == %f", Vbeta);
-    }
+    // if (update_offset_ && fabs(Vbeta) < 0.000001)
+    // {
+    //     offset_step_ = 0;
+    //     // ESP_LOGI(TAG, "Vbeta == %f", Vbeta);
+    // }
 }
