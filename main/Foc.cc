@@ -6,6 +6,7 @@
 #include "driver/spi_master.h"
 #include "math.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 static constexpr float squareRoot3 = 1.73205f;
 static const char *TAG = "FOC";
@@ -20,8 +21,8 @@ void Foc::init(int pair, float r, int kv, float dc)
 
 void Foc::print() const
 {
-    ESP_LOGI(TAG, "q: %f, d: %f, angle: %f, total angle: %f, ma: %f, mb: %f, mc: %f",
-             tq_, td_, angle_, total_angle_, current_ma_a_, current_ma_b_, current_ma_c_);
+    ESP_LOGI(TAG, "q: %f, d: %f, angle: %f, total angle: %f, ma: %f, mb: %f, mc: %f, pid internal: %d,  speed: %f",
+             q_, d_, angle_, total_angle_, current_ma_a_, current_ma_b_, current_ma_c_, pid_ts_internal_, speed_);
 }
 
 float Foc::updateOffset(float d)
@@ -218,17 +219,29 @@ void Foc::update()
         angle_ += 2.0 * M_PI;
     }
 
+    if (++pid_count_ == 40)
+    {
+        int64_t us = esp_timer_get_time();
+        pid_ts_internal_ = us - pid_ts_;
+        speed_ = (total_angle_ - pid_angle_) * 1000000 / (pid_ts_internal_);
+        pid_angle_ = total_angle_;
+        // pid控制
+        q_ = pid_speed_.update(speed_) / (kv_ * M_PI * 2 / 60);
+        q_ = std::min(dc_, q_);
+        d_ = std::min(dc_, d_);
+        pid_count_ = 0;
+        pid_ts_ = us;
+    }
+
     update_duty();
 
     // 读取电流
-    assert(current_sensor_);
-    assert(current_sensor_->getCurrent((float &)current_ma_a_, (float &)current_ma_b_, (float &)current_ma_c_));
+    // assert(current_sensor_);
+    // assert(current_sensor_->getCurrent((float &)current_ma_a_, (float &)current_ma_b_, (float &)current_ma_c_));
 }
 
 void Foc::update_duty()
 {
-    q_ = tq_;
-    d_ = td_;
     float Valpha = d_ * cosf(angle_) - q_ * sinf(angle_);
     float Vbeta = q_ * cosf(angle_) + d_ * sinf(angle_);
 
