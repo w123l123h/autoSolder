@@ -10,6 +10,7 @@ public:
     virtual void setCallback(void (*func)(void *), void *data) = 0;
     virtual void setAdcCallback(void (*func)(void *), void *data) = 0;
     virtual void start() = 0;
+    virtual void stop() = 0;
     virtual void setDuty(float dutyA, float dutyB, float dutyC) = 0;
 };
 

@@ -24,6 +24,41 @@ void Foc::print() const
              tq_, td_, angle_, total_angle_, current_ma_a_, current_ma_b_, current_ma_c_);
 }
 
+float Foc::updateOffset(float d)
+{
+    update_offset_ = true;
+    float temp = tq_;
+    tq_ = d;
+    angle_ = M_3PI_4 * 2;
+    start();
+    vTaskDelay(pdMS_TO_TICKS(500));
+    int count = 0;
+    float last_angle = -1.f;
+    while (true)
+    {
+        float angle = angle_sensor_->getAngle();
+        if (fabs(angle - last_angle) < 0.1)
+        {
+            ++count;
+            if (count > 20)
+            {
+                offset_ = angle;
+                break;
+            }
+        }
+        else
+        {
+            count = 0;
+        }
+        last_angle = angle;
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    stop();
+    update_offset_ = false;
+    tq_ = temp;
+    return offset_;
+}
+
 void Foc::start()
 {
     if (task_handle_)
@@ -34,23 +69,38 @@ void Foc::start()
     last_angle_ = -1.0;
     xTaskCreatePinnedToCore(foc_task, "FOCTask", 4096, this,
                             configMAX_PRIORITIES - 1, &task_handle_, 1);
-    xTaskCreatePinnedToCore(adc_task, "AdcTask", 4096, this,
-                            configMAX_PRIORITIES - 1, &adc_task_handle_, 0);
+    // xTaskCreatePinnedToCore(adc_task, "AdcTask", 4096, this,
+    //                         configMAX_PRIORITIES - 1, &adc_task_handle_, 0);
 
     pwm_->start();
 }
 
 void Foc::stop()
 {
+    if (pwm_)
+    {
+        pwm_->stop();
+    }
+    vTaskDelay(pdMS_TO_TICKS(1));
     if (task_handle_)
     {
         vTaskDelete(task_handle_);
         task_handle_ = nullptr;
     }
-    if(adc_task_handle_)
+    if (adc_task_handle_)
     {
         vTaskDelete(adc_task_handle_);
         adc_task_handle_ = nullptr;
+    }
+    if (semaphore_)
+    {
+        vSemaphoreDelete(semaphore_);
+        semaphore_ = nullptr;
+    }
+    if (adc_semaphore_)
+    {
+        vSemaphoreDelete(adc_semaphore_);
+        adc_semaphore_ = nullptr;
     }
 }
 
@@ -68,7 +118,7 @@ void Foc::connect(IPwm *p)
 {
     pwm_ = p;
     pwm_->setCallback(pwm_func, this);
-    pwm_->setAdcCallback(adc_func, this);
+    // pwm_->setAdcCallback(adc_func, this);
 }
 
 void Foc::foc_task(void *p)
@@ -107,6 +157,8 @@ void Foc::pwm_func(void *p)
 {
     Foc *foc = (Foc *)p;
     assert(foc);
+    if (!foc->semaphore_)
+        return;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(foc->semaphore_, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -123,6 +175,12 @@ void Foc::adc_func(void *p)
 
 void Foc::update()
 {
+    if (update_offset_)
+    {
+        angle_ += offset_step_;
+        update_duty();
+        return;
+    }
     assert(angle_sensor_);
     // --- 读取 AS5048A 角度 ---
     angle_rad_ = angle_sensor_->getAngle();
@@ -153,7 +211,7 @@ void Foc::update()
     last_angle_ = angle_rad_;
 
     // angle += 0.01;
-    angle_ = pair_ * angle_rad_ + M_PI * 0.5;
+    angle_ = (pair_ * angle_rad_ - offset_) + M_PI * 0.5;
     angle_ = fmod(angle_, 2.0 * M_PI);
     if (angle_ < 0)
     {
@@ -161,6 +219,10 @@ void Foc::update()
     }
 
     update_duty();
+
+    // 读取电流
+    assert(current_sensor_);
+    assert(current_sensor_->getCurrent((float &)current_ma_a_, (float &)current_ma_b_, (float &)current_ma_c_));
 }
 
 void Foc::update_duty()
@@ -169,6 +231,7 @@ void Foc::update_duty()
     d_ = td_;
     float Valpha = d_ * cosf(angle_) - q_ * sinf(angle_);
     float Vbeta = q_ * cosf(angle_) + d_ * sinf(angle_);
+
     float dutyA = 0;
     float dutyB = 0;
     float dutyC = 0;
@@ -231,4 +294,10 @@ void Foc::update_duty()
 
     assert(pwm_);
     pwm_->setDuty(dutyA, dutyB, dutyC);
+
+    if (update_offset_ && fabs(Vbeta) < 0.000001)
+    {
+        offset_step_ = 0;
+        // ESP_LOGI(TAG, "Vbeta == %f", Vbeta);
+    }
 }

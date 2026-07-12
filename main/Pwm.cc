@@ -144,8 +144,10 @@ bool IRAM_ATTR Pwm::cmp_on_reach_cb(mcpwm_cmpr_handle_t comparator,
 {
 	// adc采样
 	Pwm *pwm = static_cast<Pwm *>(user_ctx);
-	assert(pwm && pwm->adc_func_);
-	pwm->adc_func_(pwm->adc_data_);
+	if (pwm && pwm->adc_func_)
+	{
+		pwm->adc_func_(pwm->adc_data_);
+	}
 	return false;
 }
 

@@ -13,7 +13,7 @@ public:
     virtual void setCallback(void (*func)(void *), void *data) override;
     virtual void setAdcCallback(void (*func)(void *), void *data) override;
     virtual void start() override;
-    void stop();
+    virtual void stop() override;
     virtual void setDuty(float dutyA, float dutyB, float dutyC) override;
 
 private:

@@ -16,6 +16,11 @@ public:
 
     void print()const;
 
+    float updateOffset(float d);
+    void offset(float offset)
+    {
+        offset_ = offset;
+    }
     void pid(float p, float i, float d)
     {
         kp_ = p;
@@ -53,6 +58,9 @@ private:
     int kv_ = 0;
     float dc_ = 0.0f;
     uint32_t freq_hz_ = 0;
+    float offset_ = 0.0f;
+    volatile bool update_offset_ = false;
+    volatile float offset_step_ = 0.0003f;
 
     volatile float tq_ = 0.0f;
     volatile float td_ = 0.0f;
