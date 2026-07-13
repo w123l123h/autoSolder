@@ -11,12 +11,39 @@
 static constexpr float squareRoot3 = 1.73205f;
 static const char *TAG = "FOC";
 
-void Foc::init(int pair, float r, int kv, float dc)
+// 头文件或全局
+#define SIN_TABLE_SIZE 1024
+static float sin_table[SIN_TABLE_SIZE];
+
+// 初始化时生成
+void init_sin_table()
+{
+    for (int i = 0; i < SIN_TABLE_SIZE; i++)
+    {
+        sin_table[i] = sinf(2 * M_PI * i / SIN_TABLE_SIZE);
+    }
+}
+
+// 快速 sine
+inline float fast_sin(float angle)
+{
+    int idx = (int)(angle * (SIN_TABLE_SIZE / (2.0f * M_PI))) & (SIN_TABLE_SIZE - 1);
+    return sin_table[idx];
+}
+inline float fast_cos(float angle)
+{
+    return fast_sin(angle + M_PI_2);
+}
+
+void Foc::init(int pair, float r, int kv, float dc, int dir)
 {
     pair_ = pair;
     r_ = r;
     kv_ = kv;
     dc_ = dc;
+    dir_ = dir;
+    assert(dir_ == 1 || dir_ == -1);
+    init_sin_table();
 }
 
 void Foc::print() const
@@ -226,7 +253,7 @@ void Foc::update()
         speed_ = (total_angle_ - pid_angle_) * 1000000 / (pid_ts_internal_);
         pid_angle_ = total_angle_;
         // pid控制
-        q_ = pid_speed_.update(speed_) / (kv_ * M_PI * 2 / 60);
+        q_ = dir_ * pid_speed_.update(speed_); // / (kv_ * M_PI * 2 / 60);
         q_ = std::max(std::min(dc_, q_), -dc_);
         d_ = std::max(std::min(dc_, d_), -dc_);
         pid_count_ = 0;
@@ -242,8 +269,8 @@ void Foc::update()
 
 void Foc::update_duty()
 {
-    float Valpha = d_ * cosf(angle_) - q_ * sinf(angle_);
-    float Vbeta = q_ * cosf(angle_) + d_ * sinf(angle_);
+    float Valpha = d_ * fast_cos(angle_) - q_ * fast_sin(angle_);
+    float Vbeta = q_ * fast_cos(angle_) + d_ * fast_sin(angle_);
 
     float dutyA = 0;
     float dutyB = 0;
