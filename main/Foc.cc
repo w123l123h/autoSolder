@@ -42,6 +42,7 @@ void Foc::init(int pair, float r, int kv, float dc, int dir)
     kv_ = kv;
     dc_ = dc;
     dir_ = dir;
+    dc_max_ = dc_ * 0.666667;
     assert(dir_ == 1 || dir_ == -1);
     init_sin_table();
 }
@@ -254,8 +255,8 @@ void Foc::update()
         pid_angle_ = total_angle_;
         // pid控制
         q_ = dir_ * pid_speed_.update(speed_); // / (kv_ * M_PI * 2 / 60);
-        q_ = std::max(std::min(dc_, q_), -dc_);
-        d_ = std::max(std::min(dc_, d_), -dc_);
+        q_ = std::max(std::min(dc_max_, q_), -dc_max_);
+        d_ = std::max(std::min(dc_max_, d_), -dc_max_);
         pid_count_ = 0;
         pid_ts_ = us;
     }

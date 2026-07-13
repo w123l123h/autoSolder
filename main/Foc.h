@@ -63,6 +63,7 @@ private:
     float r_ = 0.0f;
     int kv_ = 0;
     float dc_ = 0.0f;
+    float dc_max_ = 0.0f;
     int dir_ = 1;
 
     float offset_ = 0.0f;
