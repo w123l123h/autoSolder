@@ -16,7 +16,7 @@ public:
     /**
      * @param dir 1:正转 -1:反转
      */
-    void init(int pair, float r, int kv, float dc, int dir);
+    void init(int pair, float r, int kv, float dc, int dir, int pid_interval);
 
     void print() const;
 
@@ -82,6 +82,7 @@ private:
     int pid_ts_internal_ = 0;
     Pid pid_speed_;
     Pid pid_position_;
+    int pid_interval_ = 1;
 
     adc_oneshot_unit_handle_t adc_handle = nullptr;
     adc_cali_handle_t cali_handle = nullptr;

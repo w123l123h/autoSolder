@@ -35,7 +35,7 @@ inline float fast_cos(float angle)
     return fast_sin(angle + M_PI_2);
 }
 
-void Foc::init(int pair, float r, int kv, float dc, int dir)
+void Foc::init(int pair, float r, int kv, float dc, int dir, int pid_interval)
 {
     pair_ = pair;
     r_ = r;
@@ -43,6 +43,7 @@ void Foc::init(int pair, float r, int kv, float dc, int dir)
     dc_ = dc;
     dir_ = dir;
     dc_max_ = dc_ * 0.666667;
+    pid_interval_ = pid_interval;
     assert(dir_ == 1 || dir_ == -1);
     init_sin_table();
 }
@@ -247,7 +248,7 @@ void Foc::update()
         angle_ += 2.0 * M_PI;
     }
 
-    if (++pid_count_ == 40)
+    if (++pid_count_ == pid_interval_)
     {
         int64_t us = esp_timer_get_time();
         pid_ts_internal_ = us - pid_ts_;
