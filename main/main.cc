@@ -23,7 +23,7 @@ extern "C" void app_main(void)
     foc.connect(new Pwm(0, freq, GPIO_NUM_36, GPIO_NUM_34, GPIO_NUM_37));
 
     drv.enable(true);
-    foc.offset(6.25);
+    foc.offset(6);
     // float offset = foc.updateOffset(3);
     // ESP_LOGI("FOC", "offset: %f", offset);
     // vTaskDelay(pdMS_TO_TICKS(1));

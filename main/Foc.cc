@@ -61,7 +61,7 @@ float Foc::updateOffset(float d)
     tq_ = d;
     angle_ = M_3PI_4 * 2;
     start();
-    vTaskDelay(pdMS_TO_TICKS(500));
+    vTaskDelay(pdMS_TO_TICKS(800));
     int count = 0;
     float last_angle = -1.f;
     while (true)
@@ -207,7 +207,7 @@ void Foc::update()
 {
     if (update_offset_)
     {
-        angle_ += offset_step_;
+        // angle_ += offset_step_;
         update_duty();
         return;
     }
