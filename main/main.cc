@@ -13,13 +13,14 @@ extern "C" void app_main(void)
     DRV8313 drv(GPIO_NUM_47, GPIO_NUM_38, GPIO_NUM_33, GPIO_NUM_35);
 
     uint32_t freq = 16000;
+    uint32_t pidFreq = 1000;
 
     Foc foc;
-    foc.init(7, 10, 150, 12, 1, freq / 1000);
+    foc.init(7, 10, 150, 12, 1, freq / pidFreq);
     // foc.speed(6.28);
     foc.speedPid(0.02, 0.01, 0.0, 10);
-    foc.positionPid(5, 0.000, 0.0, 10);
-    foc.position(20);
+    foc.positionPid(2, 0.000, 0.0, 10);
+    foc.position(100);
     foc.connect(new AngleSensor(GPIO_NUM_10, GPIO_NUM_12, GPIO_NUM_13, GPIO_NUM_11));
     foc.connect(new CurrentSensor(ADC_CHANNEL_3, ADC_CHANNEL_5));
     foc.connect(new Pwm(0, freq, GPIO_NUM_36, GPIO_NUM_34, GPIO_NUM_37));
