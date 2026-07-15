@@ -50,8 +50,8 @@ void Foc::init(int pair, float r, int kv, float dc, int dir, int pid_interval)
 
 void Foc::print() const
 {
-    ESP_LOGI(TAG, "q: %f, d: %f, angle: %f, total angle: %f, ma: %f, mb: %f, mc: %f, pid internal: %d,  speed: %f",
-             q_, d_, angle_, total_angle_, current_ma_a_, current_ma_b_, current_ma_c_, pid_ts_internal_, speed_);
+    ESP_LOGI(TAG, "q: %f, d: %f, angle: %f, total angle: %f, pid internal: %d,  speed: %f, position: %f",
+             q_, d_, angle_, total_angle_, pid_ts_internal_, speed_, position_ + total_angle_);
 }
 
 float Foc::updateOffset(float d)
@@ -223,6 +223,7 @@ void Foc::update()
     if (last_angle_ < 0)
     {
         last_angle_ = angle_rad_;
+        position_ = last_angle_;
         return;
     }
     float delta = angle_rad_ - last_angle_;
@@ -251,15 +252,24 @@ void Foc::update()
     if (++pid_count_ == pid_interval_)
     {
         int64_t us = esp_timer_get_time();
-        pid_ts_internal_ = us - pid_ts_;
-        speed_ = (total_angle_ - pid_angle_) * 1000000 / (pid_ts_internal_);
-        pid_angle_ = total_angle_;
-        // pid控制
-        q_ = dir_ * pid_speed_.update(speed_); // / (kv_ * M_PI * 2 / 60);
-        q_ = std::max(std::min(dc_max_, q_), -dc_max_);
-        d_ = std::max(std::min(dc_max_, d_), -dc_max_);
-        pid_count_ = 0;
-        pid_ts_ = us;
+
+        if (pid_position_.enable())
+        {
+            float speed = pid_position_.update(position_ + total_angle_);
+            pid_speed_.t(speed);
+        }
+        if (pid_speed_.enable())
+        {
+            pid_ts_internal_ = us - pid_ts_;
+            speed_ = (total_angle_ - pid_angle_) * 1000000 / (pid_ts_internal_);
+            pid_angle_ = total_angle_;
+            // pid控制
+            q_ = dir_ * pid_speed_.update(speed_); // / (kv_ * M_PI * 2 / 60);
+            q_ = std::max(std::min(dc_max_, q_), -dc_max_);
+            d_ = std::max(std::min(dc_max_, d_), -dc_max_);
+            pid_count_ = 0;
+            pid_ts_ = us;
+        }
     }
 
     update_duty();

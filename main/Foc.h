@@ -25,17 +25,21 @@ public:
     {
         offset_ = offset;
     }
-    void speedPid(float p, float i, float d)
+    void speedPid(float p, float i, float d, float maxSpeed)
     {
-        pid_speed_.pid(p, i, d);
+        pid_speed_.pid(p, i, d, maxSpeed);
     }
-    void positionPid(float p, float i, float d)
+    void positionPid(float p, float i, float d, float maxPosition)
     {
-        pid_position_.pid(p, i, d);
+        pid_position_.pid(p, i, d, maxPosition);
     }
     void speed(float speed)
     {
         pid_speed_.t(speed);
+    }
+    void position(float position)
+    {
+        pid_position_.t(position);
     }
 
     float totalAngle() const
@@ -83,6 +87,7 @@ private:
     Pid pid_speed_;
     Pid pid_position_;
     int pid_interval_ = 1;
+    float speed_max_ = 60.0f;
 
     adc_oneshot_unit_handle_t adc_handle = nullptr;
     adc_cali_handle_t cali_handle = nullptr;
@@ -95,6 +100,7 @@ private:
     float last_angle_ = -1.0;
     float total_angle_ = 0.0;
     float speed_ = 0.0;
+    float position_ = 0.0;
 
     IPwm *pwm_ = nullptr;
     IAngleSensor *angle_sensor_ = nullptr;
