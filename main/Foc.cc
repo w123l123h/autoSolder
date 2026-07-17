@@ -46,7 +46,6 @@ void Foc::init(int pair, float r, int kv, float dc, int dir, int pid_interval)
     pid_interval_ = pid_interval;
     assert(dir_ == 1 || dir_ == -1);
     init_sin_table();
-    init_angle();
 }
 
 void Foc::print() const

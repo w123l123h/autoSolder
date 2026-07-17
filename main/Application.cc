@@ -56,6 +56,7 @@ void Application::init()
 void Application::run()
 {
     touch_.run();
+    foc_.start();
     float angle = 0;
     while (true)
     {
@@ -73,8 +74,6 @@ void Application::touched()
     {
     case WorkState::Idle:
     {
-        foc_.init_angle();
-        foc_.start();
         break;
     }
     case WorkState::Waiting:
@@ -129,13 +128,12 @@ void Application::checkRecycled()
         {
             state_ = WorkState::Idle;
             drv_.enable(false);
-            foc_.stop();
             changed_angle_ = 0;
             ESP_LOGI(TAG, "Finished= %f", target_position_);
             vTaskDelete(task_);
             return;
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 

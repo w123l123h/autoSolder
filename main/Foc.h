@@ -52,7 +52,7 @@ public:
         pid_position_.t(position);
     }
 
-    float position()const;
+    float position() const;
 
     float totalAngle() const
     {
@@ -114,7 +114,7 @@ private:
     float last_angle_ = -1.0;
     float total_angle_ = 0.0;
     float speed_ = 0.0;
-    float position_ = 0.0;
+    volatile float position_ = 0.0;
 
     IPwm *pwm_ = nullptr;
     IAngleSensor *angle_sensor_ = nullptr;
