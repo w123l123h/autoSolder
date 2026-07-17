@@ -25,14 +25,24 @@ public:
     {
         offset_ = offset;
     }
-    void speedPid(float p, float i, float d, float maxSpeed)
+    void speedPid(float p, float i, float d, float max_i_speed, float max_speed)
     {
-        pid_speed_.pid(p, i, d, maxSpeed);
+        pid_speed_.pid(p, i, d, max_i_speed, max_speed);
     }
-    void positionPid(float p, float i, float d, float maxPosition)
+    void resetSpeed()
     {
-        pid_position_.pid(p, i, d, maxPosition);
+        pid_speed_.reset();
     }
+
+    void positionPid(float p, float i, float d, float max_i_position, float max_position)
+    {
+        pid_position_.pid(p, i, d, max_i_position, max_position);
+    }
+    void resetPosition()
+    {
+        pid_position_.reset();
+    }
+
     void speed(float speed)
     {
         pid_speed_.t(speed);
@@ -42,10 +52,14 @@ public:
         pid_position_.t(position);
     }
 
+    float position()const;
+
     float totalAngle() const
     {
         return total_angle_;
     }
+
+    void init_angle();
 
     void start();
     void stop();

@@ -1,6 +1,8 @@
 #ifndef _PID_H_
 #define _PID_H_
 
+#include <algorithm>
+
 class Pid
 {
 public:
@@ -8,15 +10,30 @@ public:
     {
         t_ = t;
     }
+    float t() const
+    {
+        return t_;
+    }
 
-    void pid(float kp, float ki, float kd, float t_max)
+    void pid(float kp, float ki, float kd, float t_i_max, float t_max)
     {
         enable_ = true;
         kp_ = kp;
         ki_ = ki;
         kd_ = kd;
-        if(ki != 0)
-            err_total_max_ = t_max / ki;
+        if (ki != 0)
+        {
+            err_total_max_ = t_i_max / ki;
+        }
+        t_max_ = t_max;
+        reset();
+    }
+
+    void reset()
+    {
+        err_ = 0;
+        err_last_ = 0;
+        err_total_ = 0;
     }
 
     float update(float c)
@@ -34,7 +51,7 @@ public:
 
         float rt = kp_ * err_ + ki_ * err_total_ + kd_ * (err_ - err_last_);
         err_last_ = err_;
-        return rt;
+        return std::max((std::min(rt, t_max_), -t_max_));
     }
 
     bool enable() const
@@ -52,6 +69,7 @@ private:
     float err_total_ = 0.0f;
     float t_ = 0.0f;
     float err_total_max_;
+    float t_max_ = 0.0f;
 };
 
 #endif

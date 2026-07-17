@@ -40,8 +40,4 @@ extern "C" void app_main(void)
     Application app;
     app.init();
     app.run();
-    while (true)
-    {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
 }

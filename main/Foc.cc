@@ -46,12 +46,13 @@ void Foc::init(int pair, float r, int kv, float dc, int dir, int pid_interval)
     pid_interval_ = pid_interval;
     assert(dir_ == 1 || dir_ == -1);
     init_sin_table();
+    init_angle();
 }
 
 void Foc::print() const
 {
-    ESP_LOGI(TAG, "q: %f, d: %f, angle: %f, total angle: %f, pid internal: %d,  speed: %f, position: %f",
-             q_, d_, angle_, total_angle_, pid_ts_internal_, speed_, position_ + total_angle_);
+    ESP_LOGI(TAG, "q: %.2f, d: %.2f, angle: %.2f, total angle: %.2f, pid internal: %d,  speed: %.2f, position: %.2f, tpos: %.2f, tspeed: %.2f",
+             q_, d_, angle_, total_angle_, pid_ts_internal_, speed_, position_, pid_position_.t(), pid_speed_.t());
 }
 
 float Foc::updateOffset(float d)
@@ -87,6 +88,11 @@ float Foc::updateOffset(float d)
     update_offset_ = false;
     tq_ = temp;
     return offset_;
+}
+
+float Foc::position() const
+{
+    return position_;
 }
 
 void Foc::start()
@@ -238,6 +244,7 @@ void Foc::update()
     }
 
     total_angle_ += delta;
+    position_ += delta;
     last_angle_ = angle_rad_;
     last_angle_ = angle_rad_;
 
@@ -252,10 +259,9 @@ void Foc::update()
     if (++pid_count_ == pid_interval_)
     {
         int64_t us = esp_timer_get_time();
-
         if (pid_position_.enable())
         {
-            float speed = pid_position_.update(position_ + total_angle_);
+            float speed = pid_position_.update(position_);
             pid_speed_.t(speed);
         }
         if (pid_speed_.enable())
@@ -352,4 +358,14 @@ void Foc::update_duty()
     //     offset_step_ = 0;
     //     // ESP_LOGI(TAG, "Vbeta == %f", Vbeta);
     // }
+}
+
+void Foc::init_angle()
+{
+    assert(angle_sensor_);
+    last_angle_ = angle_rad_ = angle_sensor_->getAngle();
+    position_ = last_angle_;
+    total_angle_ = 0;
+    pid_angle_ = 0;
+    pid_count_ = 0;
 }
