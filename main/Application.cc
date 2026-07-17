@@ -124,7 +124,7 @@ void Application::checkRecycled()
     while (true)
     {
         assert(state_ == WorkState::Recycling);
-        if (fabs(foc_.position() - target_position_) < 0.1)
+        if (fabs(foc_.position() - target_position_) < 0.005)
         {
             state_ = WorkState::Idle;
             drv_.enable(false);
@@ -133,7 +133,7 @@ void Application::checkRecycled()
             vTaskDelete(task_);
             return;
         }
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
