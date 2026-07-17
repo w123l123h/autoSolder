@@ -22,8 +22,8 @@ void Application::init()
     foc_.connect(new CurrentSensor(ADC_CHANNEL_3, ADC_CHANNEL_5));
     foc_.connect(new Pwm(0, freq, GPIO_NUM_36, GPIO_NUM_34, GPIO_NUM_37));
 
-    foc_.speedPid(0.02, 0.01, 0.0, 10, 6.28);
-    foc_.positionPid(2, 0.000, 0.0, 10, 100);
+    foc_.speedPid(0.02, 0.01, 0.0, 8, 10);
+    foc_.positionPid(2, 0.000, 0.0, 10, 18);
 
     foc_.init(7, 10, 150, 12, 1, freq / pidFreq);
     foc_.offset(6);
@@ -86,7 +86,8 @@ void Application::touched()
         break;
     case WorkState::Recycling:
         // 重新计算changed_angle_
-        changed_angle_ = foc_.position() - position_;
+        changed_angle_ = foc_.position() - target_position_;
+        position_ = foc_.position();
         break;
     }
 
@@ -107,13 +108,13 @@ void Application::recycled()
     assert(state_ == WorkState::Waiting);
     state_ = WorkState::Recycling;
     float cur = foc_.position();
-    traget_position_ = cur - changed_angle_;
+    target_position_ = cur - changed_angle_;
 
     foc_.resetPosition();
     foc_.resetSpeed();
-    foc_.position(traget_position_);
+    foc_.position(target_position_);
     drv_.enable(true);
-    ESP_LOGI(TAG, "Recycled= %f", traget_position_);
+    ESP_LOGI(TAG, "Recycled= %f", target_position_);
 }
 
 void Application::timerCallback(TimerHandle_t timer)

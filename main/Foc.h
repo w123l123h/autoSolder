@@ -25,18 +25,18 @@ public:
     {
         offset_ = offset;
     }
-    void speedPid(float p, float i, float d, float max_i_speed, float max_speed)
+    void speedPid(float p, float i, float d, float max_i_v, float max_v)
     {
-        pid_speed_.pid(p, i, d, max_i_speed, max_speed);
+        pid_speed_.pid(p, i, d, max_i_v, max_v);
     }
     void resetSpeed()
     {
         pid_speed_.reset();
     }
 
-    void positionPid(float p, float i, float d, float max_i_position, float max_position)
+    void positionPid(float p, float i, float d, float max_i_speed, float max_speed)
     {
-        pid_position_.pid(p, i, d, max_i_position, max_position);
+        pid_position_.pid(p, i, d, max_i_speed, max_speed);
     }
     void resetPosition()
     {

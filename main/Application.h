@@ -34,7 +34,7 @@ private:
     Touch touch_;
     volatile float changed_angle_ = 0.0f;
     float position_ = 0.0f;
-    float traget_position_ = 0.0f;
+    float target_position_ = 0.0f;
     volatile WorkState state_ = WorkState::Idle;
     TimerHandle_t timer_ = nullptr;
 };

@@ -51,7 +51,7 @@ public:
 
         float rt = kp_ * err_ + ki_ * err_total_ + kd_ * (err_ - err_last_);
         err_last_ = err_;
-        return std::max((std::min(rt, t_max_), -t_max_));
+        return std::max(std::min(rt, t_max_), -t_max_);
     }
 
     bool enable() const
