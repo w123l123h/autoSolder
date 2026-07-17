@@ -26,7 +26,10 @@ private:
     void touched();
     void released();
     void recycled();
+    void checkRecycled();
+
     static void timerCallback(TimerHandle_t timer);
+    static void task(void *);
 
 private:
     DRV8313 drv_;
@@ -34,9 +37,11 @@ private:
     Touch touch_;
     volatile float changed_angle_ = 0.0f;
     float position_ = 0.0f;
+    float offset_ = -0.2;    // 每次回收，都少收一些
     float target_position_ = 0.0f;
     volatile WorkState state_ = WorkState::Idle;
     TimerHandle_t timer_ = nullptr;
+    TaskHandle_t task_ = nullptr;
 };
 
 #endif

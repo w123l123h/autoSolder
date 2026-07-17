@@ -5,6 +5,7 @@
 #include "Pwm.h"
 #include "esp_log.h"
 #include "freertos/timers.h" // 必须包含定时器头文件
+#include <cmath>
 
 #define TAG "Application"
 
@@ -72,10 +73,8 @@ void Application::touched()
     {
     case WorkState::Idle:
     {
-        state_ = WorkState::Using;
         foc_.init_angle();
         foc_.start();
-        position_ = foc_.position();
         break;
     }
     case WorkState::Waiting:
@@ -86,17 +85,19 @@ void Application::touched()
         break;
     case WorkState::Recycling:
         // 重新计算changed_angle_
+        vTaskDelete(task_);
         changed_angle_ = foc_.position() - target_position_;
-        position_ = foc_.position();
         break;
     }
 
+    state_ = WorkState::Using;
+    position_ = foc_.position();
     ESP_LOGI(TAG, "Touched= %f", position_);
 }
 
 void Application::released()
 {
-    changed_angle_ += foc_.position() - position_;
+    changed_angle_ += foc_.position() - position_ + offset_;
     state_ = WorkState::Waiting;
 
     xTimerStart(timer_, 0);
@@ -115,6 +116,27 @@ void Application::recycled()
     foc_.position(target_position_);
     drv_.enable(true);
     ESP_LOGI(TAG, "Recycled= %f", target_position_);
+
+    xTaskCreatePinnedToCore(task, "CheckRecycled", 4096, this, 5, &task_, 0);
+}
+
+void Application::checkRecycled()
+{
+    while (true)
+    {
+        assert(state_ == WorkState::Recycling);
+        if (fabs(foc_.position() - target_position_) < 0.1)
+        {
+            state_ = WorkState::Idle;
+            drv_.enable(false);
+            foc_.stop();
+            changed_angle_ = 0;
+            ESP_LOGI(TAG, "Finished= %f", target_position_);
+            vTaskDelete(task_);
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
 }
 
 void Application::timerCallback(TimerHandle_t timer)
@@ -122,4 +144,11 @@ void Application::timerCallback(TimerHandle_t timer)
     Application *app = (Application *)pvTimerGetTimerID(timer);
     assert(app);
     app->recycled();
+}
+
+void Application::task(void *p)
+{
+    Application *app = (Application *)p;
+    assert(app);
+    app->checkRecycled();
 }
