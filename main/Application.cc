@@ -46,7 +46,7 @@ void Application::init()
 
     timer_ = xTimerCreate(
         "Waiting",           // 定时器名称（调试用）
-        pdMS_TO_TICKS(3000), // 定时周期：3000ms 转换为 tick 数
+        pdMS_TO_TICKS(wait_ms_), 
         pdFALSE,             // 是否自动重载：pdFALSE 表示单次触发
         (void *)this,        // 传递给回调的用户参数（可选）
         timerCallback        // 回调函数

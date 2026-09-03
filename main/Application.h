@@ -42,6 +42,7 @@ private:
     volatile WorkState state_ = WorkState::Idle;
     TimerHandle_t timer_ = nullptr;
     TaskHandle_t task_ = nullptr;
+    int wait_ms_ = 3000;    // 等待多久回收
 };
 
 #endif
