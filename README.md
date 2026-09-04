@@ -21,7 +21,7 @@ https://makerworld.com.cn/zh/models/2923318-zi-dong-xi-si-jia#profileId-3427451
 
 ## PCB分享
 
-https://oshwhub.com/w123l123h/project_eunshpgr?jspm=hub.zy.zp.gc1___hub.fzp.zp&jlc_vid=FVRcVVNXTlgLUlwEElcIVVMFRVNeBlUCFABcUFNXTgQxVlNeT1VXUlxXR1NZUjsOAxUeFF5JWA4dDxMOAgNABAsLWBEcCA4DFBVBFBEFFAQdFEtUTlgKBgFRTwJcVgZSE1MMBlcEQllZVgcEEgVeBAIHEg%3D%3D
+https://oshwhub.com/w123l123h/project_eunshpgr
 
 
 
