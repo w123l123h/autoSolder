@@ -1,14 +1,15 @@
 ## 效果
 手放开锡丝，3秒后，自动回收，会记录使用前的位置，自动恢复到之前的位置
 
-![实物图](./res/1.jpg)
+<img src="./res/1.jpg" width="450" height="600">
 
 
 
-<video width="640" height="360" controls>
+<video width="540" height="960" controls>
   <source src="res/ok.mp4" type="video/mp4">
   您的浏览器不支持视频播放。
 </video>
+
 
 
 
