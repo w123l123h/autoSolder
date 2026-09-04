@@ -25,3 +25,9 @@ https://oshwhub.com/w123l123h/project_eunshpgr?jspm=hub.zy.zp.gc1___hub.fzp.zp&j
 
 
 
+## 注意事项
+
+* 代码中电机**零电角度**是写死的，请根据自己的电机设置
+  * Foc::offset设置
+  * 如果不知道这个参数是多少，修改代码，调用Foc::updateOffset获取，入参含义是Vq用3或者4都可以
+  * 也可以使用SimpleFoc库获取zero_electric_angle
